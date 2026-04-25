@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Confuser.Runtime {
 	internal static class Compressor {
 		static byte[] key;
 
-		static GCHandle Decrypt(uint[] data, uint seed) {
+		static byte[] Decrypt(uint[] data, uint seed) {
 			var w = new uint[0x10];
 			var k = new uint[0x10];
 			ulong s = seed;
@@ -35,14 +34,13 @@ namespace Confuser.Runtime {
 			byte[] j = Lzma.Decompress(b);
 			Array.Clear(b, 0, b.Length);
 
-			GCHandle g = GCHandle.Alloc(j, GCHandleType.Pinned);
 			var z = (uint)(s % 0x8a5cb7);
 			for (int i = 0; i < j.Length; i++) {
 				j[i] ^= (byte)s;
 				if ((i & 0xff) == 0)
 					s = (s * s) % 0x8a5cb7;
 			}
-			return g;
+			return j;
 		}
 
 		[STAThread]
@@ -52,12 +50,10 @@ namespace Confuser.Runtime {
 
 			Assembly a = Assembly.GetExecutingAssembly();
 			Module n = a.ManifestModule;
-			GCHandle h = Decrypt(q, (uint)Mutation.KeyI1);
-			var b = (byte[])h.Target;
+			byte[] b = Decrypt(q, (uint)Mutation.KeyI1);
 			Module m = a.LoadModule("koi", b);
 
 			Array.Clear(b, 0, b.Length);
-			h.Free();
 			Array.Clear(q, 0, q.Length);
 
 			key = n.ResolveSignature(Mutation.KeyI2);
@@ -98,12 +94,9 @@ namespace Confuser.Runtime {
 				uint s = 0x6fff61;
 				foreach (byte c in b)
 					s = s * 0x5e3f1f + c;
-				GCHandle h = Decrypt(d, s);
-
-				var f = (byte[])h.Target;
+				byte[] f = Decrypt(d, s);
 				Assembly a = Assembly.Load(f);
 				Array.Clear(f, 0, f.Length);
-				h.Free();
 				Array.Clear(d, 0, d.Length);
 
 				return a;
